@@ -1,0 +1,12 @@
+version: 2
+
+updates:
+  - package-ecosystem: "docker"
+    directory: "/src/vault-aws"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "daily"
