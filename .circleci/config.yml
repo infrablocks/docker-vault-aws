@@ -3,7 +3,7 @@ jobs:
   test:
     working_directory: ~/source
     docker:
-      - image: docker:20.10-git
+      - image: docker:19.03-git
     steps:
       - checkout
       - setup_remote_docker
@@ -17,7 +17,7 @@ jobs:
   prerelease:
     working_directory: ~/source
     docker:
-      - image: docker:20.10-git
+      - image: docker:19.03-git
     steps:
       - checkout
       - setup_remote_docker
@@ -30,7 +30,7 @@ jobs:
   release:
     working_directory: ~/source
     docker:
-      - image: docker:20.10-git
+      - image: docker:19.03-git
     steps:
       - checkout
       - setup_remote_docker
@@ -43,7 +43,7 @@ jobs:
   merge_pull_request:
     working_directory: ~/source
     docker:
-      - image: docker:20.10-git
+      - image: docker:19.03-git
     steps:
       - checkout
       - run: ./scripts/ci/common/install-bash.sh
