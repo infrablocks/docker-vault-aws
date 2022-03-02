@@ -9,7 +9,7 @@ RUN apk add --no-cache ca-certificates libcap su-exec tzdata && \
         mkdir -p /vault/logs && \
         mkdir -p /vault/file && \
         mkdir -p /vault/config && \
-        chown -R vault:vault /vault \
+        chown -R vault:vault /vault
 
 COPY --from=vault /bin/vault /bin/vault
 COPY --from=vault /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
@@ -21,4 +21,6 @@ EXPOSE 8200
 
 COPY --from=vault /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-vault-entrypoint.sh
 
-ENV STARTUP_SCRIPT_PATH=/usr/local/bin/docker-vault-entrypoint.sh
+COPY start.sh /usr/local/bin/start.sh
+
+ENV STARTUP_SCRIPT_PATH=/usr/local/bin/start.sh
