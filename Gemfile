@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem 'rake', '~> 13.0'
 gem 'rake_terraform', '~> 1.21'
-gem 'rake_docker', '~> 2.11'
+gem 'rake_docker', '~> 2.15'
 gem 'rake_circle_ci', '~> 0.9'
 gem 'rake_github', '~> 0.5'
 gem 'rake_ssh', '~> 0.4'
