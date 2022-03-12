@@ -48,11 +48,12 @@ describe 'entrypoint' do
     after(:all, &:reset_docker_backend)
 
     it 'runs vault' do
-      expect(process('vault server')).to(be_running)
+      expect(process('.*/bin/vault server.*')).to(be_running)
     end
 
     it 'gets config from /vault/config' do
-      expect(process('vault server').args).to(match(/-config=\/vault\/config/))
+      expect(process('.*/bin/vault server.*').args)
+        .to(match(/-config=\/vault\/config/))
     end
   end
 
@@ -105,7 +106,7 @@ describe 'entrypoint' do
         "docker-entrypoint.sh #{args} > #{logfile_path} 2>&1 &")
 
     begin
-      Octopoller.poll(timeout: 5) do
+      Octopoller.poll(timeout: 25) do
         docker_entrypoint_log = command("cat #{logfile_path}").stdout
         docker_entrypoint_log =~ /#{opts[:started_indicator]}/ ?
             docker_entrypoint_log :
