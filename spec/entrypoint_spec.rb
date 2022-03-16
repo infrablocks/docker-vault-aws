@@ -48,12 +48,11 @@ describe 'entrypoint' do
     after(:all, &:reset_docker_backend)
 
     it 'runs vault' do
-      expect(process('.*/bin/vault server.*')).to(be_running)
+      expect(process('.*vault server.*')).to(be_running)
     end
 
     it 'gets config from /vault/config' do
-      puts execute_command('ps -ocomm,args,pid').stdout
-      expect(process('.*/bin/vault server.*').args)
+      expect(process('.*vault server.*').args)
         .to(match(/-config=\/vault\/config/))
     end
   end
