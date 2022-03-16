@@ -52,6 +52,7 @@ describe 'entrypoint' do
     end
 
     it 'gets config from /vault/config' do
+      puts execute_command('ps -ocomm,args,pid').stdout
       expect(process('.*/bin/vault server.*').args)
         .to(match(/-config=\/vault\/config/))
     end
