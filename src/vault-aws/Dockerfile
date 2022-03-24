@@ -1,4 +1,4 @@
-FROM vault:1.9.4 as vault
+FROM vault:1.10.0 as vault
 
 FROM infrablocks/alpine-aws-s3-config:0.22.0
 
