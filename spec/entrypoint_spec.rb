@@ -16,7 +16,8 @@ describe 'entrypoint' do
     'AWS_S3_ENDPOINT_URL' => s3_endpoint_url,
     'AWS_S3_BUCKET_REGION' => s3_bucket_region,
     'AWS_S3_ENV_FILE_OBJECT_PATH' => s3_env_file_object_path,
-    'SKIP_SETCAP' => true
+    'SKIP_SETCAP' => true,
+    'VAULT_API_ADDR' => 'http://127.0.0.1:8200'
   }
   image = 'vault-aws:latest'
   extra = {
@@ -36,6 +37,13 @@ describe 'entrypoint' do
 
   describe 'by default' do
     before(:all) do
+      kms_key = create_kms_key(s3_endpoint_url, s3_bucket_region)
+
+      environment['AWS_DEFAULT_REGION'] = s3_bucket_region
+      environment['VAULT_AWSKMS_SEAL_KEY_ID'] = kms_key['KeyMetadata']['KeyId']
+      environment['AWS_KMS_ENDPOINT'] = s3_endpoint_url
+      set :env, environment
+
       create_env_file(
         endpoint_url: s3_endpoint_url,
         region: s3_bucket_region,
@@ -57,6 +65,12 @@ describe 'entrypoint' do
     it 'gets config from /vault/config' do
       expect(process('.*vault server.*').args)
         .to(match(%r{-config=/vault/config}))
+    end
+
+    it 'auto unseals using kms' do
+      sleep 5
+      puts(command("cat /tmp/docker-entrypoint.log").stdout)
+      expect(execute_command('vault status').stdout).to(eq('yes'))
     end
   end
 
@@ -81,7 +95,7 @@ describe 'entrypoint' do
     command = command(command_string)
     exit_status = command.exit_status
     unless exit_status == 0
-      raise "\"#{command_string}\" failed with exit code: #{exit_status}"
+      raise "\"#{command_string}\" failed with exit code: #{exit_status}, #{command.stderr}"
     end
 
     command
@@ -106,6 +120,14 @@ describe 'entrypoint' do
                     "#{opts[:object_path]} " \
                     "--region \"#{opts[:region]}\" " \
                     '--sse AES256')
+  end
+
+  def create_kms_key(endpoint_url, region)
+    res = execute_command(
+      "aws --endpoint-url #{endpoint_url} kms create-key --region #{region}"
+    )
+
+    JSON.parse(res.stdout)
   end
 
   def create_object(opts)

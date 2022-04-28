@@ -2,9 +2,9 @@ version: '2.1'
 
 services:
   s3:
-    image: localstack/localstack:0.14.0
+    image: localstack/localstack:0.14.2
     environment:
-      - SERVICES=s3
+      - SERVICES=s3,kms
       - DOCKER_HOST=unix:///var/run/docker.sock
       - HOST_TMP_FOLDER=${TMPDIR}
     volumes:
