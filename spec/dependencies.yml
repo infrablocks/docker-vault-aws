@@ -10,6 +10,10 @@ services:
     volumes:
       - "${TMPDIR}:/tmp/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
+    ports:
+      - "4566:4566"
 
   metadata:
     image: amazon/amazon-ec2-metadata-mock:v1.9.2
+    ports:
+      - "1338:1338"
