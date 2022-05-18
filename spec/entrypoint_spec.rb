@@ -17,7 +17,9 @@ describe 'entrypoint' do
     'AWS_S3_BUCKET_REGION' => s3_bucket_region,
     'AWS_S3_ENV_FILE_OBJECT_PATH' => s3_env_file_object_path,
     'SKIP_SETCAP' => true,
-    'VAULT_API_ADDR' => 'http://127.0.0.1:8200'
+    'VAULT_ADDR' => 'http://127.0.0.1:8200',
+    'VAULT_SEAL_TYPE' => 'awskms',
+    'TLS_DISABLE' => 1
   }
   image = 'vault-aws:latest'
   extra = {
@@ -30,14 +32,13 @@ describe 'entrypoint' do
 
   before(:all) do
     set :backend, :docker
-    set :env, environment
     set :docker_image, image
     set :docker_container_create_options, extra
   end
 
   describe 'by default' do
     before(:all) do
-      kms_key = create_kms_key(s3_endpoint_url, s3_bucket_region)
+      kms_key = create_kms_key('http://0.0.0.0:4566', s3_bucket_region)
 
       environment['AWS_DEFAULT_REGION'] = s3_bucket_region
       environment['VAULT_AWSKMS_SEAL_KEY_ID'] = kms_key['KeyMetadata']['KeyId']
@@ -67,10 +68,22 @@ describe 'entrypoint' do
         .to(match(%r{-config=/vault/config}))
     end
 
-    it 'auto unseals using kms' do
-      sleep 5
-      puts(command("cat /tmp/docker-entrypoint.log").stdout)
-      expect(execute_command('vault status').stdout).to(eq('yes'))
+    describe 'when initialized' do
+      init_result = ''
+
+      before(:all) do
+        init_result = execute_command('vault operator init').stdout
+      end
+
+      it 'is initialized' do
+        expect(init_result).to(contain('Success! Vault is initialized'))
+      end
+
+      it 'auto unseals using kms' do
+        proof_of_auto_unseal = 'Recovery Key'
+
+        expect(init_result).to(contain(proof_of_auto_unseal))
+      end
     end
   end
 
@@ -95,7 +108,8 @@ describe 'entrypoint' do
     command = command(command_string)
     exit_status = command.exit_status
     unless exit_status == 0
-      raise "\"#{command_string}\" failed with exit code: #{exit_status}, #{command.stderr}"
+      raise "\"#{command_string}\" failed with exit code: #{exit_status}, " \
+            " #{command.stderr}"
     end
 
     command
@@ -123,11 +137,11 @@ describe 'entrypoint' do
   end
 
   def create_kms_key(endpoint_url, region)
-    res = execute_command(
-      "aws --endpoint-url #{endpoint_url} kms create-key --region #{region}"
-    )
+    cmd = 'AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
+          "--endpoint-url #{endpoint_url} kms create-key --region #{region}"
+    res = `#{cmd}`
 
-    JSON.parse(res.stdout)
+    JSON.parse(res)
   end
 
   def create_object(opts)
