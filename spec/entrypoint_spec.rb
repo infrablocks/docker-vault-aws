@@ -4,6 +4,7 @@ require 'spec_helper'
 
 describe 'entrypoint' do
   metadata_service_url = 'http://metadata:1338'
+  localstack_endpoint_url = 'http://localhost:4566'
   s3_endpoint_url = 'http://localstack:4566'
   s3_bucket_region = 'us-east-1'
   s3_bucket_path = 's3://bucket'
@@ -38,7 +39,7 @@ describe 'entrypoint' do
 
   describe 'by default' do
     before(:all) do
-      kms_key = create_kms_key('http://0.0.0.0:4566', s3_bucket_region)
+      kms_key = create_kms_key(localstack_endpoint_url, s3_bucket_region)
 
       environment['AWS_DEFAULT_REGION'] = s3_bucket_region
       environment['VAULT_AWSKMS_SEAL_KEY_ID'] = kms_key['KeyMetadata']['KeyId']
@@ -46,7 +47,7 @@ describe 'entrypoint' do
       set :env, environment
 
       create_env_file(
-        endpoint_url: s3_endpoint_url,
+        endpoint_url: localstack_endpoint_url,
         region: s3_bucket_region,
         bucket_path: s3_bucket_path,
         object_path: s3_env_file_object_path
@@ -115,8 +116,17 @@ describe 'entrypoint' do
     command
   end
 
+  def execute_cmd(*command_string)
+    stdout, stderr, status = Open3.capture3(*command_string)
+    unless status == 0
+      raise "\"#{command_string}\" failed with exit code: #{status}, " \
+            " #{stderr}"
+    end
+    stdout
+  end
+
   def make_bucket(opts)
-    execute_command('aws ' \
+    execute_cmd('AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
                     "--endpoint-url #{opts[:endpoint_url]} " \
                     's3 ' \
                     'mb ' \
@@ -125,8 +135,8 @@ describe 'entrypoint' do
   end
 
   def copy_object(opts)
-    execute_command("echo -n #{Shellwords.escape(opts[:content])} | " \
-                    'aws ' \
+    execute_cmd( "printf #{Shellwords.escape(opts[:content])} | " \
+                    'AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
                     "--endpoint-url #{opts[:endpoint_url]} " \
                     's3 ' \
                     'cp ' \
