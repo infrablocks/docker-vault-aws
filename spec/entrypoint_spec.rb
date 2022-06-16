@@ -38,20 +38,48 @@ describe 'entrypoint' do
     set :docker_image, image
     set :docker_container_create_options, extra
     set :env, environment
+
+    S3.create_bucket(
+      endpoint_url: localstack_endpoint_url,
+      region: aws_region,
+      bucket_path: s3_bucket_path
+    )
   end
 
   describe 'by default' do
     before(:all) do
-      kms_key = KMS::create_key(
+      create_env_file(
+        endpoint_url: localstack_endpoint_url,
+        region: aws_region,
+        bucket_path: s3_bucket_path,
+        object_path: s3_env_file_object_path,
+        env: {}
+      )
+
+      execute_docker_entrypoint(
+        started_indicator: 'Vault server started!'
+      )
+    end
+
+    after(:all, &:reset_docker_backend)
+
+    it 'runs vault' do
+      expect(process('.*vault server.*')).to(be_running)
+    end
+
+    it 'gets config from /vault/config' do
+      expect(process('.*vault server.*').args)
+        .to(match(%r{-config=/vault/config}))
+    end
+  end
+
+  describe 'with seal type kms' do
+    before(:all) do
+      kms_key = KMS.create_key(
         endpoint_url: localstack_endpoint_url,
         region: aws_region
       )
 
-      S3::create_bucket(
-        endpoint_url: localstack_endpoint_url,
-        region: aws_region,
-        bucket_path: s3_bucket_path,
-      )
       create_env_file(
         endpoint_url: localstack_endpoint_url,
         region: aws_region,
@@ -72,11 +100,6 @@ describe 'entrypoint' do
 
     it 'runs vault' do
       expect(process('.*vault server.*')).to(be_running)
-    end
-
-    it 'gets config from /vault/config' do
-      expect(process('.*vault server.*').args)
-        .to(match(%r{-config=/vault/config}))
     end
 
     describe 'when initialized' do
