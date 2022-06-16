@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'aws'
 
 describe 'entrypoint' do
   metadata_service_url = 'http://metadata:1338'
@@ -39,13 +40,21 @@ describe 'entrypoint' do
 
   describe 'by default' do
     before(:all) do
-      kms_key = create_kms_key(localstack_endpoint_url, s3_bucket_region)
+      kms_key = KMS::create_key(
+        endpoint_url: localstack_endpoint_url,
+        region: s3_bucket_region
+      )
 
       environment['AWS_DEFAULT_REGION'] = s3_bucket_region
       environment['VAULT_AWSKMS_SEAL_KEY_ID'] = kms_key['KeyMetadata']['KeyId']
       environment['AWS_KMS_ENDPOINT'] = s3_endpoint_url
       set :env, environment
 
+      S3::create_bucket(
+        endpoint_url: localstack_endpoint_url,
+        region: s3_bucket_region,
+        bucket_path: s3_bucket_path,
+      )
       create_env_file(
         endpoint_url: localstack_endpoint_url,
         region: s3_bucket_region,
@@ -94,7 +103,7 @@ describe 'entrypoint' do
   end
 
   def create_env_file(opts)
-    create_object(
+    S3::create_object(
       opts
         .merge(
           content: (opts[:env] || {})
@@ -114,49 +123,6 @@ describe 'entrypoint' do
     end
 
     command
-  end
-
-  def execute_cmd(*command_string)
-    stdout, stderr, status = Open3.capture3(*command_string)
-    unless status == 0
-      raise "\"#{command_string}\" failed with exit code: #{status}, " \
-            " #{stderr}"
-    end
-    stdout
-  end
-
-  def make_bucket(opts)
-    execute_cmd('AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
-                    "--endpoint-url #{opts[:endpoint_url]} " \
-                    's3 ' \
-                    'mb ' \
-                    "#{opts[:bucket_path]} " \
-                    "--region \"#{opts[:region]}\"")
-  end
-
-  def copy_object(opts)
-    execute_cmd( "printf #{Shellwords.escape(opts[:content])} | " \
-                    'AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
-                    "--endpoint-url #{opts[:endpoint_url]} " \
-                    's3 ' \
-                    'cp ' \
-                    '- ' \
-                    "#{opts[:object_path]} " \
-                    "--region \"#{opts[:region]}\" " \
-                    '--sse AES256')
-  end
-
-  def create_kms_key(endpoint_url, region)
-    cmd = 'AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... aws ' \
-          "--endpoint-url #{endpoint_url} kms create-key --region #{region}"
-    res = `#{cmd}`
-
-    JSON.parse(res)
-  end
-
-  def create_object(opts)
-    make_bucket(opts)
-    copy_object(opts)
   end
 
   def wait_for_contents(file, content)
