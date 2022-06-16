@@ -6,8 +6,8 @@ require 'aws'
 describe 'entrypoint' do
   metadata_service_url = 'http://metadata:1338'
   localstack_endpoint_url = 'http://localhost:4566'
-  s3_endpoint_url = 'http://localstack:4566'
-  s3_bucket_region = 'us-east-1'
+  container_aws_endpoint_url = 'http://localstack:4566'
+  aws_region = 'us-east-1'
   s3_bucket_path = 's3://bucket'
   s3_env_file_object_path = 's3://bucket/env-file.env'
 
@@ -15,12 +15,13 @@ describe 'entrypoint' do
     'AWS_METADATA_SERVICE_URL' => metadata_service_url,
     'AWS_ACCESS_KEY_ID' => '...',
     'AWS_SECRET_ACCESS_KEY' => '...',
-    'AWS_S3_ENDPOINT_URL' => s3_endpoint_url,
-    'AWS_S3_BUCKET_REGION' => s3_bucket_region,
+    'AWS_DEFAULT_REGION' => aws_region,
+    'AWS_S3_ENDPOINT_URL' => container_aws_endpoint_url,
+    'AWS_S3_BUCKET_REGION' => aws_region,
     'AWS_S3_ENV_FILE_OBJECT_PATH' => s3_env_file_object_path,
+    'AWS_KMS_ENDPOINT' => container_aws_endpoint_url,
     'SKIP_SETCAP' => true,
     'VAULT_ADDR' => 'http://127.0.0.1:8200',
-    'VAULT_SEAL_TYPE' => 'awskms',
     'TLS_DISABLE' => 1
   }
   image = 'vault-aws:latest'
@@ -36,30 +37,30 @@ describe 'entrypoint' do
     set :backend, :docker
     set :docker_image, image
     set :docker_container_create_options, extra
+    set :env, environment
   end
 
   describe 'by default' do
     before(:all) do
       kms_key = KMS::create_key(
         endpoint_url: localstack_endpoint_url,
-        region: s3_bucket_region
+        region: aws_region
       )
-
-      environment['AWS_DEFAULT_REGION'] = s3_bucket_region
-      environment['VAULT_AWSKMS_SEAL_KEY_ID'] = kms_key['KeyMetadata']['KeyId']
-      environment['AWS_KMS_ENDPOINT'] = s3_endpoint_url
-      set :env, environment
 
       S3::create_bucket(
         endpoint_url: localstack_endpoint_url,
-        region: s3_bucket_region,
+        region: aws_region,
         bucket_path: s3_bucket_path,
       )
       create_env_file(
         endpoint_url: localstack_endpoint_url,
-        region: s3_bucket_region,
+        region: aws_region,
         bucket_path: s3_bucket_path,
-        object_path: s3_env_file_object_path
+        object_path: s3_env_file_object_path,
+        env: {
+          'VAULT_SEAL_TYPE' => 'awskms',
+          'VAULT_AWSKMS_SEAL_KEY_ID' => kms_key['KeyMetadata']['KeyId']
+        }
       )
 
       execute_docker_entrypoint(
