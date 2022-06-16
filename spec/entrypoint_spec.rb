@@ -4,7 +4,7 @@ require 'spec_helper'
 
 describe 'entrypoint' do
   metadata_service_url = 'http://metadata:1338'
-  s3_endpoint_url = 'http://s3:4566'
+  s3_endpoint_url = 'http://localstack:4566'
   s3_bucket_region = 'us-east-1'
   s3_bucket_path = 's3://bucket'
   s3_env_file_object_path = 's3://bucket/env-file.env'
