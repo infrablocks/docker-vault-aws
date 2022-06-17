@@ -2,24 +2,28 @@
 
 require 'spec_helper'
 require 'aws'
+require 'docker_helper'
 
 describe 'entrypoint' do
   metadata_service_url = 'http://metadata:1338'
-  localstack_endpoint_url = 'http://localhost:4566'
-  container_aws_endpoint_url = 'http://localstack:4566'
+  localstack_url = 'http://localstack:4566'
   aws_region = 'us-east-1'
   s3_bucket_path = 's3://bucket'
   s3_env_file_object_path = 's3://bucket/env-file.env'
+
+  $docker = DockerHelper.new(lambda { | command_string | command(command_string)})
+  $s3 = S3.new($docker)
+  $kms = KMS.new($docker)
 
   environment = {
     'AWS_METADATA_SERVICE_URL' => metadata_service_url,
     'AWS_ACCESS_KEY_ID' => '...',
     'AWS_SECRET_ACCESS_KEY' => '...',
     'AWS_DEFAULT_REGION' => aws_region,
-    'AWS_S3_ENDPOINT_URL' => container_aws_endpoint_url,
+    'AWS_S3_ENDPOINT_URL' => localstack_url,
     'AWS_S3_BUCKET_REGION' => aws_region,
     'AWS_S3_ENV_FILE_OBJECT_PATH' => s3_env_file_object_path,
-    'AWS_KMS_ENDPOINT' => container_aws_endpoint_url,
+    'AWS_KMS_ENDPOINT' => localstack_url,
     'SKIP_SETCAP' => true,
     'VAULT_ADDR' => 'http://127.0.0.1:8200',
     'TLS_DISABLE' => 1
@@ -39,8 +43,8 @@ describe 'entrypoint' do
     set :docker_container_create_options, extra
     set :env, environment
 
-    S3.create_bucket(
-      endpoint_url: localstack_endpoint_url,
+    $s3.create_bucket(
+      endpoint_url: localstack_url,
       region: aws_region,
       bucket_path: s3_bucket_path
     )
@@ -49,7 +53,7 @@ describe 'entrypoint' do
   describe 'by default' do
     before(:all) do
       create_env_file(
-        endpoint_url: localstack_endpoint_url,
+        endpoint_url: localstack_url,
         region: aws_region,
         bucket_path: s3_bucket_path,
         object_path: s3_env_file_object_path,
@@ -75,13 +79,13 @@ describe 'entrypoint' do
 
   describe 'with seal type kms' do
     before(:all) do
-      kms_key = KMS.create_key(
-        endpoint_url: localstack_endpoint_url,
+      kms_key = $kms.create_key(
+        endpoint_url: localstack_url,
         region: aws_region
       )
 
       create_env_file(
-        endpoint_url: localstack_endpoint_url,
+        endpoint_url: localstack_url,
         region: aws_region,
         bucket_path: s3_bucket_path,
         object_path: s3_env_file_object_path,
@@ -106,7 +110,7 @@ describe 'entrypoint' do
       init_result = ''
 
       before(:all) do
-        init_result = execute_command('vault operator init').stdout
+        init_result = $docker.execute_command('vault operator init').stdout
       end
 
       it 'is initialized' do
@@ -127,7 +131,7 @@ describe 'entrypoint' do
   end
 
   def create_env_file(opts)
-    S3::create_object(
+    $s3.create_object(
       opts
         .merge(
           content: (opts[:env] || {})
@@ -136,17 +140,6 @@ describe 'entrypoint' do
                      .join("\n")
         )
     )
-  end
-
-  def execute_command(command_string)
-    command = command(command_string)
-    exit_status = command.exit_status
-    unless exit_status == 0
-      raise "\"#{command_string}\" failed with exit code: #{exit_status}, " \
-            " #{command.stderr}"
-    end
-
-    command
   end
 
   def wait_for_contents(file, content)
@@ -165,7 +158,7 @@ describe 'entrypoint' do
     start_command = "docker-entrypoint.sh #{args} > #{logfile_path} 2>&1 &"
     started_indicator = opts[:started_indicator]
 
-    execute_command(start_command)
+    $docker.execute_command(start_command)
     wait_for_contents(logfile_path, started_indicator)
   end
 end
