@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require 'aws'
+require 'vault'
 require 'docker_helper'
 
 describe 'entrypoint' do
@@ -12,10 +13,11 @@ describe 'entrypoint' do
   s3_env_file_object_path = 's3://bucket/env-file.env'
 
   docker = DockerHelper.new(lambda { |command_string|
-                              command(command_string)
-                            })
+    command(command_string)
+  })
   s3 = S3.new(docker)
   kms = KMS.new(docker)
+  vault = Vault.new(docker)
 
   environment = {
     'AWS_METADATA_SERVICE_URL' => metadata_service_url,
@@ -77,6 +79,15 @@ describe 'entrypoint' do
     it 'gets config from /vault/config' do
       expect(process('.*vault server.*').args)
         .to(match(%r{-config=/vault/config}))
+    end
+
+    it 'unlocks vault with 3 key shares' do
+      vault.init
+      vault.unseal_with_keyshares
+
+      status = vault.status
+
+      expect(status).to(contain(/Sealed\s*false/))
     end
   end
 
