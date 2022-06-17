@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# rubocop:disable Style/GlobalVars
+
 require 'spec_helper'
 require 'aws'
 require 'docker_helper'
@@ -11,7 +13,9 @@ describe 'entrypoint' do
   s3_bucket_path = 's3://bucket'
   s3_env_file_object_path = 's3://bucket/env-file.env'
 
-  $docker = DockerHelper.new(lambda { | command_string | command(command_string)})
+  $docker = DockerHelper.new(lambda { |command_string|
+                               command(command_string)
+                             })
   $s3 = S3.new($docker)
   $kms = KMS.new($docker)
 
@@ -162,3 +166,5 @@ describe 'entrypoint' do
     wait_for_contents(logfile_path, started_indicator)
   end
 end
+
+# rubocop:enable Style/GlobalVars
