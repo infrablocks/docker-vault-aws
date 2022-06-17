@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable Style/GlobalVars
-
 require 'spec_helper'
 require 'aws'
 require 'docker_helper'
@@ -13,11 +11,11 @@ describe 'entrypoint' do
   s3_bucket_path = 's3://bucket'
   s3_env_file_object_path = 's3://bucket/env-file.env'
 
-  $docker = DockerHelper.new(lambda { |command_string|
-                               command(command_string)
-                             })
-  $s3 = S3.new($docker)
-  $kms = KMS.new($docker)
+  docker = DockerHelper.new(lambda { |command_string|
+                              command(command_string)
+                            })
+  s3 = S3.new(docker)
+  kms = KMS.new(docker)
 
   environment = {
     'AWS_METADATA_SERVICE_URL' => metadata_service_url,
@@ -47,7 +45,7 @@ describe 'entrypoint' do
     set :docker_container_create_options, extra
     set :env, environment
 
-    $s3.create_bucket(
+    s3.create_bucket(
       endpoint_url: localstack_url,
       region: aws_region,
       bucket_path: s3_bucket_path
@@ -57,6 +55,7 @@ describe 'entrypoint' do
   describe 'by default' do
     before(:all) do
       create_env_file(
+        s3,
         endpoint_url: localstack_url,
         region: aws_region,
         bucket_path: s3_bucket_path,
@@ -64,7 +63,7 @@ describe 'entrypoint' do
         env: {}
       )
 
-      execute_docker_entrypoint(
+      docker.execute_entrypoint(
         started_indicator: 'Vault server started!'
       )
     end
@@ -83,12 +82,13 @@ describe 'entrypoint' do
 
   describe 'with seal type kms' do
     before(:all) do
-      kms_key = $kms.create_key(
+      kms_key = kms.create_key(
         endpoint_url: localstack_url,
         region: aws_region
       )
 
       create_env_file(
+        s3,
         endpoint_url: localstack_url,
         region: aws_region,
         bucket_path: s3_bucket_path,
@@ -99,7 +99,7 @@ describe 'entrypoint' do
         }
       )
 
-      execute_docker_entrypoint(
+      docker.execute_entrypoint(
         started_indicator: 'Vault server started!'
       )
     end
@@ -114,7 +114,7 @@ describe 'entrypoint' do
       init_result = ''
 
       before(:all) do
-        init_result = $docker.execute_command('vault operator init').stdout
+        init_result = docker.execute_command('vault operator init').stdout
       end
 
       it 'is initialized' do
@@ -134,8 +134,8 @@ describe 'entrypoint' do
     Specinfra::Backend::Docker.clear
   end
 
-  def create_env_file(opts)
-    $s3.create_object(
+  def create_env_file(s3, opts)
+    s3.create_object(
       opts
         .merge(
           content: (opts[:env] || {})
@@ -145,26 +145,4 @@ describe 'entrypoint' do
         )
     )
   end
-
-  def wait_for_contents(file, content)
-    Octopoller.poll(timeout: 30) do
-      docker_entrypoint_log = command("cat #{file}").stdout
-      docker_entrypoint_log =~ /#{content}/ ? docker_entrypoint_log : :re_poll
-    end
-  rescue Octopoller::TimeoutError => e
-    puts command("cat #{file}").stdout
-    raise e
-  end
-
-  def execute_docker_entrypoint(opts)
-    args = (opts[:arguments] || []).join(' ')
-    logfile_path = '/tmp/docker-entrypoint.log'
-    start_command = "docker-entrypoint.sh #{args} > #{logfile_path} 2>&1 &"
-    started_indicator = opts[:started_indicator]
-
-    $docker.execute_command(start_command)
-    wait_for_contents(logfile_path, started_indicator)
-  end
 end
-
-# rubocop:enable Style/GlobalVars
