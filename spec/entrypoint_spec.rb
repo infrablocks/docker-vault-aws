@@ -140,6 +140,51 @@ describe 'entrypoint' do
     end
   end
 
+  describe 'with config from S3' do
+    before(:all) do
+      configuration_file_object_path = "#{s3_bucket_path}/config.hcl"
+
+      s3.create_object(
+        endpoint_url: localstack_url,
+        region: aws_region,
+        bucket_path: s3_bucket_path,
+        object_path: configuration_file_object_path,
+        content: File.read('spec/fixtures/custom-vault-config.hcl')
+      )
+
+      create_env_file(
+        s3,
+        endpoint_url: localstack_url,
+        region: aws_region,
+        bucket_path: s3_bucket_path,
+        object_path: s3_env_file_object_path,
+        env: {
+          'VAULT_CONFIGURATION_FILE_OBJECT_PATH' =>
+            configuration_file_object_path
+        }
+      )
+
+      docker.execute_entrypoint(
+        started_indicator: 'Vault server started!'
+      )
+    end
+
+    after(:all, &:reset_docker_backend)
+
+    it 'runs vault' do
+      expect(process('.*vault server.*')).to(be_running)
+    end
+
+    it 'uses config provided' do
+      vault.init
+      vault.unseal_with_keyshares
+
+      status_result = vault.status
+
+      expect(status_result).to(contain(/Cluster Name\s*TestVault/))
+    end
+  end
+
   def reset_docker_backend
     Specinfra::Backend::Docker.instance.send :cleanup_container
     Specinfra::Backend::Docker.clear

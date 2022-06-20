@@ -129,7 +129,8 @@ namespace :image do
 
     t.copy_spec = [
       'src/vault-aws/Dockerfile',
-      'src/vault-aws/start.sh'
+      'src/vault-aws/start.sh',
+      'src/vault-aws/scripts'
     ]
 
     t.repository_name = 'vault-aws'
