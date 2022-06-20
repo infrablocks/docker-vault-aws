@@ -5,7 +5,7 @@ FROM infrablocks/alpine-aws-s3-config:0.22.0
 RUN addgroup vault && \
     adduser -S -G vault vault
 
-RUN apk add --no-cache ca-certificates libcap su-exec tzdata && \
+RUN apk add --no-cache ca-certificates libcap su-exec tzdata gettext && \
         mkdir -p /vault/logs && \
         mkdir -p /vault/file && \
         mkdir -p /vault/config && \
@@ -23,4 +23,8 @@ COPY --from=vault /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-vaul
 
 COPY start.sh /usr/local/bin/start.sh
 
+COPY scripts/fetch-configuration.sh /usr/local/bin/fetch-configuration.sh
+RUN ["chmod", "+x", "/usr/local/bin/fetch-configuration.sh"]
+
+ENV FETCH_SECRETS_FILES_SCRIPT_PATH=/usr/local/bin/fetch-configuration.sh
 ENV STARTUP_SCRIPT_PATH=/usr/local/bin/start.sh

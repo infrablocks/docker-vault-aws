@@ -11,13 +11,15 @@ EOF
 )
 fi
 
-cat << EOF > /vault/config/config.hcl
-storage "inmem" {}
+if [ ! -f "/vault/config/config.hcl" ]; then
+  cat << EOF > /vault/config/config.hcl
+  storage "inmem" {}
 
-$LISTENER_TCP
+  $LISTENER_TCP
 
-disable_mlock = true
+  disable_mlock = true
 EOF
+fi
 
 env
 
