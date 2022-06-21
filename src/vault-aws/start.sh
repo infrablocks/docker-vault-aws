@@ -21,6 +21,4 @@ if [ ! -f "/vault/config/config.hcl" ]; then
 EOF
 fi
 
-env
-
 /usr/local/bin/docker-vault-entrypoint.sh server
