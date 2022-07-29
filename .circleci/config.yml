@@ -61,6 +61,11 @@ commands:
                 event: pass
                 channel: builds
                 template: SLACK_SUCCESS_NOTIFICATION
+  configure_docker:
+    steps:
+      - run: ./scripts/ci/common/install-docker.sh
+      - run: ./scripts/ci/common/install-docker-compose.sh
+      - setup_remote_docker
   configure_tools:
     steps:
       - run: ./scripts/ci/common/install-git-crypt.sh
