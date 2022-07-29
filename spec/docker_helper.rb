@@ -10,7 +10,7 @@ class DockerHelper
     exit_status = command.exit_status
     unless exit_status == 0
       raise "\"#{command_string}\" failed with exit code: #{exit_status}, " \
-            " #{command.stderr}"
+            "#{command.stderr}"
     end
 
     command

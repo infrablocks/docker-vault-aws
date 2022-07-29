@@ -190,7 +190,7 @@ describe 'entrypoint' do
     Specinfra::Backend::Docker.clear
   end
 
-  def create_env_file(s3, opts)
+  def create_env_file(s3, opts) # rubocop:disable Naming/MethodParameterName
     s3.create_object(
       opts
         .merge(

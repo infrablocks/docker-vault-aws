@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Vault
   def initialize(docker)
     @docker = docker
@@ -5,7 +7,7 @@ class Vault
   end
 
   def init
-    @init_result = @docker.execute_command("vault operator init").stdout
+    @init_result = @docker.execute_command('vault operator init').stdout
   end
 
   def unseal_with_keyshares
@@ -19,6 +21,6 @@ class Vault
   end
 
   def status
-    @docker.execute_command("vault status").stdout
+    @docker.execute_command('vault status').stdout
   end
 end

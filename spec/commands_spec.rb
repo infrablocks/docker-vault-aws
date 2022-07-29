@@ -18,7 +18,7 @@ describe 'commands' do
 
   it 'includes the vault command' do
     expect(command('/bin/vault --version').stdout)
-      .to match(/1.10.4/)
+      .to match(/1.11/)
   end
 
   it 'includes the envsubst command' do

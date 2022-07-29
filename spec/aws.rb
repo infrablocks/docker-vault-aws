@@ -34,7 +34,7 @@ class KMS
 
   def create_key(opts)
     command = @docker.execute_command(
-      "aws --endpoint-url #{opts[:endpoint_url]} "\
+      "aws --endpoint-url #{opts[:endpoint_url]} " \
       "kms create-key --region #{opts[:region]}"
     )
 
