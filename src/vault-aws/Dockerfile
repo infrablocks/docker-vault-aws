@@ -1,6 +1,6 @@
-FROM vault:1.11.4 as vault
+FROM vault:1.12.2 as vault
 
-FROM infrablocks/alpine-aws-s3-config:0.22.0
+FROM infrablocks/alpine-aws-s3-config:0.23.0
 
 RUN addgroup vault && \
     adduser -S -G vault vault
