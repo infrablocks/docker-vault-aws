@@ -1,4 +1,4 @@
-FROM hashicorp/vault:1.15.4 as vault
+FROM hashicorp/vault:1.17.2 as vault
 
 FROM infrablocks/alpine-aws-s3-config:0.23.0
 
