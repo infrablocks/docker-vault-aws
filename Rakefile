@@ -34,7 +34,7 @@ def latest_tag
 end
 
 def tmpdir
-  base = (ENV.fetch('TMPDIR', nil) || '/tmp')
+  base = ENV.fetch('TMPDIR', nil) || '/tmp'
   OS.osx? ? "/private#{base}" : base
 end
 
