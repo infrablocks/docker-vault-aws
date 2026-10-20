@@ -34,7 +34,7 @@ describe 'entrypoint' do
   }
   image = 'vault-aws:latest'
   extra = {
-    'Entrypoint' => '/bin/sh',
+    'Entrypoint' => ['/bin/sh'],
     'HostConfig' => {
       'Binds' => ['/var/run/docker.sock:/tmp/docker.sock'],
       'NetworkMode' => 'docker_vault_aws_test_default'
